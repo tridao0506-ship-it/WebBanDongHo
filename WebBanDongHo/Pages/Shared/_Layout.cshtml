@@ -1,0 +1,388 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - WebBanDongHo</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        body.dark-mode {
+            background-color: #121212 !important;
+            color: #e0e0e0 !important;
+        }
+
+            body.dark-mode .navbar,
+            body.dark-mode .card,
+            body.dark-mode .modal-content,
+            body.dark-mode .bg-light,
+            body.dark-mode .bg-white,
+            body.dark-mode footer {
+                background-color: #1e1e1e !important;
+                color: #e0e0e0 !important;
+                border-color: #333 !important;
+            }
+
+            body.dark-mode .navbar-brand,
+            body.dark-mode .nav-link.text-dark,
+            body.dark-mode .text-dark,
+            body.dark-mode .text-secondary,
+            body.dark-mode .table {
+                color: #f8f9fa !important;
+            }
+
+                body.dark-mode .table-bordered,
+                body.dark-mode .table td,
+                body.dark-mode .table th {
+                    border-color: #333 !important;
+                }
+
+            body.dark-mode .form-control,
+            body.dark-mode .form-select,
+            body.dark-mode select,
+            body.dark-mode input {
+                background-color: #2b2b2b !important;
+                color: #fff !important;
+                border-color: #444 !important;
+            }
+
+            body.dark-mode #chat-messages {
+                background-color: #181818 !important;
+            }
+
+        #left-floating-tools {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 9998;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        #ai-bot-box {
+            width: 330px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container">
+                <a class="navbar-brand fw-bold" asp-page="/Index">WebBanDongHo</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-page="/Index">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-page="/Privacy">Privacy</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-page="/Orders">Đơn hàng của tôi</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-page="/Cart">Giỏ hàng</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-warning fw-bold" asp-page="/LuckyWheel">🎯 Vòng quay</a>
+                        </li>
+                        @if (User.Identity != null && User.Identity.IsAuthenticated && (User.Identity.Name == "admin" || User.IsInRole("Admin")))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-danger fw-bold" asp-page="/Admin/Index">Trang Quản Trị</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-primary fw-bold" asp-page="/Admin/LiveChat">LiveChat Khách</a>
+                            </li>
+                        }
+                    </ul>
+                    <ul class="navbar-nav align-items-center gap-2">
+                        <li class="nav-item">
+                            <button type="button" id="darkModeBtn" onclick="window.toggleDarkMode()" class="btn btn-outline-secondary btn-sm rounded-pill fw-bold px-3" title="Chuyển chế độ Sáng / Tối">
+                                🌙 Tối
+                            </button>
+                        </li>
+                        @if (User.Identity != null && User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item">
+                                <span class="nav-link text-success fw-bold">Xin chào, @User.Identity.Name!</span>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-danger fw-bold" asp-page="/Account/Logout">Đăng xuất</a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-primary fw-bold" asp-page="/Account/Login">Đăng nhập</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <div id="left-floating-tools">
+        <div id="ai-bot-box" class="card border-0 d-none">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
+                <span class="fw-bold">🤖 Trợ Lý Ảo Tư Vấn Nhanh</span>
+                <button type="button" class="btn-close btn-close-white btn-sm" onclick="window.toggleAiBot()"></button>
+            </div>
+            <div class="card-body p-3" id="ai-bot-messages" style="height: 270px; overflow-y: auto; font-size: 0.88rem;">
+                <div class="bg-light p-2 rounded mb-2 text-dark border">
+                    Xin chào! Mình là trợ lý tự động của <strong>WebBanDongHo</strong>. Bạn chọn câu hỏi bên dưới để xem ngay nhé:
+                </div>
+                <div class="d-flex flex-wrap gap-1 mt-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.askAiBot('duoi5tr')">⌚ Mẫu dưới 5 triệu</button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.askAiBot('caocap')">💎 Mẫu cao cấp</button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.askAiBot('baohanh')">🛡️ Bảo hành</button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.askAiBot('giaohang')">🚚 Giao hàng</button>
+                </div>
+            </div>
+            <div class="card-footer bg-white p-2 d-flex gap-1 border-top">
+                <input type="text" id="ai-bot-input" class="form-control form-control-sm" placeholder="Hỏi trợ lý ảo..." onkeydown="if(event.key==='Enter'){ event.preventDefault(); window.sendAiBotText(); }" />
+                <button type="button" class="btn btn-primary btn-sm fw-bold" onclick="window.sendAiBotText()">Hỏi</button>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center">
+            <button type="button" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="btn btn-secondary rounded-circle shadow" style="width: 44px; height: 44px;" title="Cuộn lên đầu trang">
+                ⬆️
+            </button>
+            <button type="button" onclick="window.toggleAiBot()" class="btn btn-primary rounded-pill shadow fw-bold px-3" style="height: 44px;">
+                🤖 Hỏi nhanh AI
+            </button>
+        </div>
+    </div>
+
+    @if (User.Identity != null && User.Identity.IsAuthenticated && User.Identity.Name != "admin")
+    {
+        <div id="chat-widget" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
+            <button type="button" id="chat-toggle-btn" class="btn btn-danger rounded-circle shadow-lg p-3 d-flex align-items-center justify-content-center position-relative" style="width: 60px; height: 60px;" title="Mở hộp chat hỗ trợ">
+                💬
+                <span id="chat-badge" class="position-absolute top-0 start-100 translate-middle p-2 bg-success border border-light rounded-circle d-none"></span>
+            </button>
+
+            <div id="chat-box" class="card shadow-lg border-0 d-none" style="width: 340px; height: 450px; position: absolute; bottom: 70px; right: 0;">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center py-2">
+                    <span class="fw-bold">Hỗ Trợ Khách Hàng 24/7</span>
+                    <button type="button" id="chat-close-btn" class="btn btn-sm text-white fw-bold">✖</button>
+                </div>
+                <div id="chat-messages" class="card-body overflow-auto p-3" style="height: 330px; background: #f8f9fa;">
+                    <div class="text-muted text-center small mb-2">Xin chào! Shop sẵn sàng tư vấn đồng hồ cho bạn.</div>
+                </div>
+                <div class="card-footer p-2 bg-white border-top">
+                    <div class="input-group">
+                        <input type="text" id="chat-input" class="form-control form-control-sm" placeholder="Nhập tin nhắn..." autocomplete="off" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); window.guiTinNhanClient(); }" />
+                        <button type="button" id="chat-send-btn" class="btn btn-danger btn-sm fw-bold px-3" onclick="window.guiTinNhanClient()">Gửi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <footer class="border-top footer text-muted py-3 mt-4">
+        <div class="container text-center">
+            &copy; 2026 - WebBanDongHo
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        window.applyDarkMode = function () {
+            const isDark = localStorage.getItem('webdongho_dark') === 'true';
+            document.body.classList.toggle('dark-mode', isDark);
+            const btn = document.getElementById('darkModeBtn');
+            if (btn) {
+                btn.innerHTML = isDark ? '☀️ Sáng' : '🌙 Tối';
+                btn.className = isDark ? 'btn btn-warning btn-sm rounded-pill fw-bold px-3' : 'btn btn-outline-secondary btn-sm rounded-pill fw-bold px-3';
+            }
+        };
+
+        window.toggleDarkMode = function () {
+            const isDark = !document.body.classList.contains('dark-mode');
+            localStorage.setItem('webdongho_dark', isDark);
+            window.applyDarkMode();
+        };
+
+        document.addEventListener("DOMContentLoaded", window.applyDarkMode);
+
+        window.toggleAiBot = function () {
+            const box = document.getElementById('ai-bot-box');
+            if (box) box.classList.toggle('d-none');
+        };
+
+        window.appendAiMsg = function (sender, text) {
+            const container = document.getElementById('ai-bot-messages');
+            if (!container) return;
+            const div = document.createElement('div');
+            if (sender === 'user') {
+                div.className = 'bg-primary text-white p-2 rounded mb-2 ms-auto text-end';
+                div.style.maxWidth = '85%';
+            } else {
+                div.className = 'bg-light text-dark p-2 rounded mb-2 border';
+                div.style.maxWidth = '92%';
+            }
+            div.innerHTML = text;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        };
+
+        window.askAiBot = function (topic) {
+            if (topic === 'duoi5tr') {
+                window.appendAiMsg('user', 'Tư vấn mẫu đồng hồ dưới 5 triệu');
+                window.appendAiMsg('bot', 'Ở tầm giá dưới 5 triệu, shop đang sẵn hàng:<br>• <b>POEDAGAR</b>: 1.800.000 đ<br>• <b>Apple Watch Series</b>: 2.000.000 đ<br>• <b>Casio G-Shock</b>: 3.500.000 đ');
+            } else if (topic === 'caocap') {
+                window.appendAiMsg('user', 'Tư vấn các mẫu cao cấp');
+                window.appendAiMsg('bot', 'Các mẫu đồng hồ cao cấp nổi bật nhất:<br>• <b>Carnival</b>: 18.000.000 đ<br>• <b>Rolex Submariner</b>: 25.000.000 đ<br>Fullbox chính hãng, bảo hành 2 năm!');
+            } else if (topic === 'baohanh') {
+                window.appendAiMsg('user', 'Chính sách bảo hành thế nào?');
+                window.appendAiMsg('bot', 'Tất cả sản phẩm được bảo hành máy <b>24 tháng</b>, miễn phí thay pin trọn đời và lỗi 1 đổi 1 trong 7 ngày đầu.');
+            } else if (topic === 'giaohang') {
+                window.appendAiMsg('user', 'Thời gian giao hàng bao lâu?');
+                window.appendAiMsg('bot', 'Giao nhanh nội thành Hà Nội trong 2h. Các tỉnh khác từ 2 - 3 ngày, khách được kiểm tra đồng hồ trước khi thanh toán!');
+            }
+        };
+
+        window.sendAiBotText = function () {
+            const input = document.getElementById('ai-bot-input');
+            if (!input) return;
+            const text = input.value.trim();
+            if (!text) return;
+            window.appendAiMsg('user', text);
+            input.value = '';
+
+            const lower = text.toLowerCase();
+            setTimeout(() => {
+                if (lower.includes('giá') || lower.includes('rẻ') || lower.includes('triệu')) {
+                    window.askAiBot('duoi5tr');
+                } else if (lower.includes('rolex') || lower.includes('đắt') || lower.includes('cao cấp')) {
+                    window.askAiBot('caocap');
+                } else if (lower.includes('bảo hành') || lower.includes('pin') || lower.includes('lỗi')) {
+                    window.askAiBot('baohanh');
+                } else if (lower.includes('giao') || lower.includes('ship')) {
+                    window.askAiBot('giaohang');
+                } else {
+                    window.appendAiMsg('bot', 'Cảm ơn bạn! Để gặp nhân viên tư vấn trực tiếp, bạn bấm vào nút 💬 màu đỏ ở góc phải màn hình hoặc gọi <b>0357.856.778</b> nhé!');
+                }
+            }, 300);
+        };
+    </script>
+
+    @if (User.Identity != null && User.Identity.IsAuthenticated && User.Identity.Name != "admin")
+    {
+        <script>
+            window.loadClientMessages = function () {
+                fetch('/Index?handler=ClientMessages')
+                    .then(res => res.json())
+                    .then(messages => {
+                        const msgContainer = document.getElementById("chat-messages");
+                        if (!msgContainer) return;
+
+                        let html = "";
+                        if (messages.length === 0) {
+                            html = '<div class="text-muted text-center small mb-2">Chưa có tin nhắn nào. Hãy gửi tin nhắn cho shop nhé!</div>';
+                        } else {
+                            messages.forEach(item => {
+                                const isAdmin = (item.sender === "admin");
+                                html += `
+                                    <div class="mb-2 d-flex ${isAdmin ? 'justify-content-start' : 'justify-content-end'}">
+                                        <div class="p-2 px-3 rounded shadow-sm small ${isAdmin ? 'bg-white text-dark border' : 'bg-danger text-white'}" style="max-width: 85%;">
+                                            ${item.message}
+                                        </div>
+                                    </div>`;
+                            });
+                        }
+                        msgContainer.innerHTML = html;
+                        msgContainer.scrollTop = msgContainer.scrollHeight;
+                    })
+                    .catch(err => console.error("Lỗi tải tin nhắn:", err));
+            };
+
+            window.guiTinNhanClient = function () {
+                const chatInput = document.getElementById('chat-input');
+                const sendBtn = document.getElementById('chat-send-btn');
+                if (!chatInput) return;
+
+                const message = chatInput.value.trim();
+                if (message === "") return;
+
+                sendBtn.disabled = true;
+
+                fetch(`/Index?handler=ClientSendMsg&message=${encodeURIComponent(message)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        sendBtn.disabled = false;
+                        if (data.success) {
+                            chatInput.value = "";
+                            chatInput.focus();
+                            window.loadClientMessages();
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Lỗi gửi tin:", err);
+                        sendBtn.disabled = false;
+                    });
+            };
+
+            document.addEventListener("DOMContentLoaded", function () {
+                const toggleBtn = document.getElementById('chat-toggle-btn');
+                const closeBtn = document.getElementById('chat-close-btn');
+                const chatBox = document.getElementById('chat-box');
+                const chatBadge = document.getElementById('chat-badge');
+
+                if (!toggleBtn) return;
+
+                toggleBtn.addEventListener('click', () => {
+                    chatBox.classList.toggle('d-none');
+                    if (!chatBox.classList.contains('d-none')) {
+                        chatBadge.classList.add('d-none');
+                        window.loadClientMessages();
+                    }
+                });
+
+                closeBtn.addEventListener('click', () => {
+                    chatBox.classList.add('d-none');
+                });
+
+                setInterval(() => {
+                    fetch('/Index?handler=ClientMessages')
+                        .then(res => res.json())
+                        .then(messages => {
+                            if (messages.length > 0) {
+                                const lastMsg = messages[messages.length - 1];
+                                if (lastMsg.sender === "admin" && chatBox.classList.contains('d-none')) {
+                                    chatBadge.classList.remove('d-none');
+                                }
+                            }
+                            if (!chatBox.classList.contains('d-none')) {
+                                window.loadClientMessages();
+                            }
+                        });
+                }, 3000);
+            });
+        </script>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,78 @@
+﻿@page
+@model WebBanDongHo.Pages.Admin.OrdersModel
+@{
+    ViewData["Title"] = "Quản lý đơn hàng";
+}
+
+<div class="container mt-4 mb-5">
+    <h2 class="text-center text-primary fw-bold mb-4">QUẢN LÝ ĐƠN HÀNG KHÁCH HÀNG</h2>
+
+    @if (Model.DonHangs == null || !Model.DonHangs.Any())
+    {
+        <div class="alert alert-info text-center">
+            <p class="mb-0">Chưa có đơn hàng nào được đặt trên hệ thống.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive shadow-sm rounded">
+            <table class="table table-bordered table-hover align-middle mb-0">
+                <thead class="table-dark text-center">
+                    <tr>
+                        <th>Mã ĐH</th>
+                        <th>Ngày đặt</th>
+                        <th>Khách hàng / Người nhận</th>
+                        <th>Số điện thoại</th>
+                        <th>Địa chỉ giao hàng</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.DonHangs)
+                    {
+                        var status = item.TrangThai?.Trim() ?? "Đang xử lý";
+                        <tr>
+                            <td class="text-center fw-bold">#@item.Id</td>
+                            <td class="text-center">@item.NgayDat.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@item.HoTen</td>
+                            <td class="text-center">@item.SoDienThoai</td>
+                            <td>@item.DiaChi</td>
+                            <td class="text-danger fw-bold text-end">@item.TongTien.ToString("N0") đ</td>
+                            <td class="text-center">
+                                @if (status == "Hoàn thành")
+                                {
+                                    <span class="badge bg-success">✅ Đã giao thành công</span>
+                                }
+                                else if (status == "Đang giao")
+                                {
+                                    <span class="badge bg-primary">🚚 Đang giao</span>
+                                }
+                                else if (status == "Đã hủy")
+                                {
+                                    <span class="badge bg-danger">❌ Đã hủy</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">@status</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <div class="d-inline-flex gap-1 align-items-center">
+                                    <form method="post" asp-page-handler="UpdateStatus" class="d-inline-flex gap-1">
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button type="submit" name="status" value="Đang giao" class="btn btn-sm btn-primary">Giao</button>
+                                        <button type="submit" name="status" value="Hoàn thành" class="btn btn-sm btn-success">Xong</button>
+                                        <button type="submit" name="status" value="Đã hủy" class="btn btn-sm btn-danger">Hủy</button>
+                                    </form>
+                                    <a asp-page="/Details" asp-route-id="@item.Id" class="btn btn-sm btn-info text-white">Chi tiết</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

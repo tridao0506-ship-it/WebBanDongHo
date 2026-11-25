@@ -1,0 +1,91 @@
+@page "/Chat/{username?}"
+@model WebBanDongHo.Pages.ChatModel
+@{
+    ViewData["Title"] = "Chat với Admin";
+}
+@Html.AntiForgeryToken()
+<div class="container mt-4" style="max-width: 800px;">
+    <h3 class="text-center text-danger mb-3">Chat với Admin</h3>
+    <div id="chat-messages" class="border rounded p-3 mb-2" style="height: 400px; overflow-y:auto; background:#f8f9fa;">
+        <div class="text-center text-muted">Loading...</div>
+    </div>
+    <div class="input-group">
+        <input type="text" id="chat-input" class="form-control" placeholder="Nhập tin nhắn..." disabled />
+        <button id="send-btn" class="btn btn-primary" disabled>Gửi</button>
+    </div>
+</div>
+@section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+<script>
+    const username = "@Model.Username";
+    if (!username) {
+        document.getElementById('chat-messages').innerHTML = '<p class="text-danger">Tên người dùng chưa được cung cấp.</p>';
+        return;
+    }
+    const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl(`/chatHub?username=${username}`)
+        .build();
+
+    connection.start().then(() => {
+        document.getElementById('chat-input').removeAttribute('disabled');
+        document.getElementById('send-btn').removeAttribute('disabled');
+    }).catch(err => console.error(err));
+
+    connection.on('ReceiveMessage', (fromUser, message) => {
+        if (fromUser !== 'admin') return;
+        addMessage('admin', message);
+    });
+
+    function loadMessages() {
+        fetch(`?handler=Messages&username=${username}`)
+            .then(r => r.json())
+            .then(msgs => {
+                const container = document.getElementById('chat-messages');
+                container.innerHTML = '';
+                msgs.forEach(m => {
+                    addMessage(m.sender, m.message);
+                });
+                container.scrollTop = container.scrollHeight;
+            });
+    }
+
+    function addMessage(sender, text) {
+        const container = document.getElementById('chat-messages');
+        const div = document.createElement('div');
+        div.className = `mb-2 d-flex ${sender === 'admin' ? 'justify-content-start' : 'justify-content-end'}`;
+        div.innerHTML = `<div class="p-2 rounded ${sender === 'admin' ? 'bg-white border' : 'bg-primary text-white'}" style="max-width:70%">${text}</div>`;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    document.getElementById('send-btn').addEventListener('click', sendMessage);
+    document.getElementById('chat-input').addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+
+    function sendMessage() {
+        const input = document.getElementById('chat-input');
+        const msg = input.value.trim();
+        if (!msg) return;
+        fetch('?handler=Send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': token
+            },
+            body: JSON.stringify({ Username: username, Message: msg })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                addMessage(username, msg);
+                input.value = '';
+                connection.invoke('SendMessage', username, 'admin', msg).catch(err => console.error(err));
+            }
+        })
+        .catch(err => console.error(err));
+    }
+
+    loadMessages();
+    setInterval(loadMessages, 3000);
+</script>
+}

@@ -1,0 +1,462 @@
+@page
+@model WebBanDongHo.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Trang Quản Trị Hệ Thống";
+    var demSapHet = (Model.DongHo != null) ? Model.DongHo.Count(d => d.SoLuongTon <= 5) : 0;
+}
+
+<div class="container mt-4 mb-5">
+    <h2 class="text-center text-danger fw-bold mb-4">HỆ THỐNG QUẢN TRỊ</h2>
+
+    @if (demSapHet > 0)
+    {
+        <div class="alert alert-warning d-flex justify-content-between align-items-center shadow-sm py-2 px-3 mb-3">
+            <span>⚠️ <strong>Cảnh báo kho:</strong> Hiện có <strong>@demSapHet mẫu đồng hồ</strong> có số lượng tồn kho từ 5 chiếc trở xuống!</span>
+            <button type="button" class="btn btn-sm btn-warning fw-bold" onclick="document.getElementById('sanpham-tab').click()">Kiểm tra kho ngay</button>
+        </div>
+    }
+
+    <ul class="nav nav-pills nav-fill mb-4 bg-light p-2 rounded shadow-sm border" id="adminTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active fw-bold py-2" id="doanhthu-tab" data-bs-toggle="tab" data-bs-target="#tab-doanhthu" type="button">
+                📊 Thống Kê Doanh Thu
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold py-2" id="sanpham-tab" data-bs-toggle="tab" data-bs-target="#tab-sanpham" type="button">
+                ⌚ Quản Trị Sản Phẩm (@(Model.DongHo?.Count ?? 0))
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold py-2" id="donhang-tab" data-bs-toggle="tab" data-bs-target="#tab-donhang" type="button">
+                📦 Quản Lý Đơn Hàng (@Model.TongSoDonHang)
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold py-2" id="taikhoan-tab" data-bs-toggle="tab" data-bs-target="#tab-taikhoan" type="button">
+                👤 Quản Lý Tài Khoản (@(Model.NguoiDungs?.Count ?? 0))
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content pt-2" id="adminTabsContent">
+
+        <div class="tab-pane fade show active" id="tab-doanhthu" role="tabpanel">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-success text-white shadow-sm h-100 text-center p-4 border-0">
+                        <h6 class="text-uppercase fw-bold mb-2">TỔNG DOANH THU</h6>
+                        <h4 class="fw-bold mb-0">@String.Format("{0:#,##0} đ", Model.TongDoanhThu)</h4>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-primary text-white shadow-sm h-100 text-center p-4 border-0">
+                        <h6 class="text-uppercase fw-bold mb-2">Doanh Thu Đã Hoàn Thành</h6>
+                        <h4 class="fw-bold mb-0">@String.Format("{0:#,##0} đ", Model.DoanhThuHoanThanh)</h4>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-warning text-dark shadow-sm h-100 text-center p-4 border-0">
+                        <h6 class="text-uppercase fw-bold mb-2">Tổng Số Đơn Hàng</h6>
+                        <h4 class="fw-bold mb-0">@Model.TongSoDonHang đơn</h4>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-info text-white shadow-sm h-100 text-center p-4 border-0">
+                        <h6 class="text-uppercase fw-bold mb-2">Đơn Hoàn Thành</h6>
+                        <h4 class="fw-bold mb-0">@Model.SoDonHoanThanh đơn</h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-8 mb-4">
+                    <div class="card shadow-sm border h-100">
+                        <div class="card-header bg-white fw-bold text-primary py-3">
+                            📊 Biểu Đồ Doanh Thu Theo Ngày
+                        </div>
+                        <div class="card-body" style="height: 320px; position: relative;">
+                            <canvas id="revenueBarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm border h-100">
+                        <div class="card-header bg-white fw-bold text-primary py-3">
+                            🍩 Tỷ Lệ Trạng Thái Đơn Hàng
+                        </div>
+                        <div class="card-body d-flex justify-content-center align-items-center" style="height: 320px; position: relative;">
+                            <canvas id="statusPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-sanpham" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold text-secondary mb-0">Danh sách đồng hồ trong kho</h4>
+                <a href="/Admin/Create" class="btn btn-success fw-bold">+ Thêm Đồng Hồ Mới</a>
+            </div>
+
+            <div class="row">
+                @if (Model.DongHo != null && Model.DongHo.Any())
+                {
+                    foreach (var item in Model.DongHo)
+                    {
+                        <div class="col-md-3 mb-4">
+                            <div class="card h-100 shadow-sm text-center p-3 @(item.SoLuongTon <= 5 ? "border-danger" : "border") position-relative">
+                                @if (item.SoLuongTon == 0)
+                                {
+                                    <span class="badge bg-danger position-absolute top-0 end-0 m-2">❌ Hết hàng</span>
+                                }
+                                else if (item.SoLuongTon <= 5)
+                                {
+                                    <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2">⚠️ Sắp hết (@item.SoLuongTon)</span>
+                                }
+
+                                <img src="~/images/@item.HinhAnh" class="card-img-top mx-auto" style="height: 150px; object-fit: contain;" alt="@item.TenDongHo" />
+                                <div class="card-body d-flex flex-column justify-content-between p-2 mt-2">
+                                    <div>
+                                        <h5 class="card-title fw-bold fs-6 mb-2">@item.TenDongHo</h5>
+                                        <p class="card-text text-danger fw-bold mb-2">@String.Format("{0:#,##0} đ", item.GiaBan)</p>
+
+                                        <form method="post" asp-page-handler="QuickUpdateStock" class="input-group input-group-sm mb-3">
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <span class="input-group-text bg-light fw-bold">Kho:</span>
+                                            <input type="number" name="newStock" value="@item.SoLuongTon" min="0" class="form-control text-center fw-bold" />
+                                            <button type="submit" class="btn btn-outline-primary fw-bold">Lưu</button>
+                                        </form>
+                                    </div>
+                                    <div class="d-flex justify-content-between gap-1 mt-auto">
+                                        <a href="/Details?id=@item.Id" class="btn btn-info btn-sm text-white w-100 fw-bold">Xem</a>
+                                        <a href="/Edit?id=@item.Id" class="btn btn-warning btn-sm text-white w-100 fw-bold">Sửa</a>
+                                        <a href="/Delete?id=@item.Id" class="btn btn-danger btn-sm text-white w-100 fw-bold">Xóa</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-center text-muted">Chưa có sản phẩm nào.</p>
+                }
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-donhang" role="tabpanel">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <h4 class="fw-bold text-secondary mb-0">Danh sách đơn hàng</h4>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <input type="text" id="searchOrderInput" class="form-control form-control-sm" style="width: 220px;" placeholder="🔍 Tìm tên KH, SĐT, mã đơn..." oninput="filterOrdersTable()" />
+                    <select id="filterOrderStatus" class="form-select form-select-sm" style="width: 150px;" onchange="filterOrdersTable()">
+                        <option value="ALL">-- Tất cả đơn --</option>
+                        <option value="Đang giao">🚚 Đang giao</option>
+                        <option value="Hoàn thành">✅ Hoàn thành</option>
+                        <option value="Đã hủy">❌ Đã hủy</option>
+                    </select>
+                    <a href="/Admin/Index?handler=ExportExcel" class="btn btn-success btn-sm fw-bold">📥 Xuất Báo Cáo Excel</a>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body table-responsive">
+                    <table class="table table-bordered table-hover align-middle text-center mb-0" id="ordersTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Ngày đặt</th>
+                                <th>Khách hàng</th>
+                                <th>Số điện thoại</th>
+                                <th>Địa chỉ giao</th>
+                                <th>Tổng tiền</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.DonHangs != null && Model.DonHangs.Any())
+                            {
+                                foreach (var item in Model.DonHangs)
+                                {
+                                    <tr class="order-row" data-status="@item.TrangThai?.Trim()">
+                                        <td class="fw-bold">#@item.Id</td>
+                                        <td>@item.NgayDat.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td class="fw-bold text-start">@item.HoTen</td>
+                                        <td>@item.SoDienThoai</td>
+                                        <td class="text-start">@item.DiaChi</td>
+                                        <td class="text-danger fw-bold">@String.Format("{0:#,##0} đ", item.TongTien)</td>
+                                        <td>
+                                            <span class="badge @(item.TrangThai == "Hoàn thành" ? "bg-success" : item.TrangThai == "Đã hủy" ? "bg-danger" : item.TrangThai == "Đang giao" ? "bg-primary" : "bg-warning text-dark")">
+                                                @item.TrangThai
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="d-inline-flex gap-1 align-items-center">
+                                                <form method="post" asp-page-handler="UpdateStatus" class="d-inline-flex gap-1">
+                                                    <input type="hidden" name="id" value="@item.Id" />
+                                                    <button type="submit" name="status" value="Đang giao" class="btn btn-primary btn-sm">Giao</button>
+                                                    <button type="submit" name="status" value="Hoàn thành" class="btn btn-success btn-sm">Xong</button>
+                                                    <button type="submit" name="status" value="Đã hủy" class="btn btn-danger btn-sm">Hủy</button>
+                                                </form>
+                                                <button type="button" class="btn btn-dark btn-sm" data-bs-toggle="modal" data-bs-target="#invoiceModal-@item.Id">
+                                                    🖨️ In
+                                                </button>
+                                            </div>
+
+                                            <div class="modal fade text-start" id="invoiceModal-@item.Id" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog modal-lg">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header bg-dark text-white">
+                                                            <h5 class="modal-title fw-bold">🧾 HÓA ĐƠN BÁN HÀNG #DH-@item.Id</h5>
+                                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body p-4" id="printArea-@item.Id">
+                                                            <div class="d-flex justify-content-between border-bottom pb-3 mb-3">
+                                                                <div>
+                                                                    <h4 class="fw-bold text-danger mb-1">CỬA HÀNG ĐỒNG HỒ WEBBANDONGHO</h4>
+                                                                    <p class="mb-0 text-muted small">Địa chỉ: Cầu Diễn, Bắc Từ Liêm, Hà Nội</p>
+                                                                    <p class="mb-0 text-muted small">Hotline: 0357.856.778</p>
+                                                                </div>
+                                                                <div class="text-end">
+                                                                    <h5 class="fw-bold mb-1">Mã đơn: #@item.Id</h5>
+                                                                    <p class="mb-0 small">Ngày đặt: @item.NgayDat.ToString("dd/MM/yyyy HH:mm")</p>
+                                                                    <p class="mb-0 small">Trạng thái: <strong>@item.TrangThai</strong></p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="mb-3">
+                                                                <h6 class="fw-bold text-uppercase text-secondary">Thông tin người nhận:</h6>
+                                                                <p class="mb-1"><strong>Khách hàng:</strong> @item.HoTen</p>
+                                                                <p class="mb-1"><strong>Số điện thoại:</strong> @item.SoDienThoai</p>
+                                                                <p class="mb-1"><strong>Địa chỉ giao hàng:</strong> @item.DiaChi</p>
+                                                            </div>
+
+                                                            <table class="table table-bordered text-center align-middle mb-3">
+                                                                <thead class="table-light">
+                                                                    <tr>
+                                                                        <th>STT</th>
+                                                                        <th class="text-start">Tên đồng hồ</th>
+                                                                        <th>Đơn giá</th>
+                                                                        <th>Số lượng</th>
+                                                                        <th>Thành tiền</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @if (item.ChiTietDonHangs != null && item.ChiTietDonHangs.Any())
+                                                                    {
+                                                                        int stt = 1;
+                                                                        foreach (var ct in item.ChiTietDonHangs)
+                                                                        {
+                                                                            <tr>
+                                                                                <td>@(stt++)</td>
+                                                                                <td class="text-start fw-bold">@ct.TenDongHo</td>
+                                                                                <td>@String.Format("{0:#,##0} đ", ct.GiaBan)</td>
+                                                                                <td>@ct.SoLuong</td>
+                                                                                <td class="fw-bold text-danger">@String.Format("{0:#,##0} đ", ct.GiaBan * ct.SoLuong)</td>
+                                                                            </tr>
+                                                                        }
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <tr>
+                                                                            <td>1</td>
+                                                                            <td class="text-start fw-bold">Đồng hồ cao cấp (Đơn #@item.Id)</td>
+                                                                            <td>@String.Format("{0:#,##0} đ", item.TongTien)</td>
+                                                                            <td>1</td>
+                                                                            <td class="fw-bold text-danger">@String.Format("{0:#,##0} đ", item.TongTien)</td>
+                                                                        </tr>
+                                                                    }
+                                                                </tbody>
+                                                                <tfoot>
+                                                                    <tr>
+                                                                        <td colspan="4" class="text-end fw-bold fs-5">TỔNG CỘNG THANH TOÁN:</td>
+                                                                        <td class="fw-bold text-danger fs-5">@String.Format("{0:#,##0} đ", item.TongTien)</td>
+                                                                    </tr>
+                                                                </tfoot>
+                                                            </table>
+
+                                                            <div class="row align-items-center mt-4 pt-2 border-top">
+                                                                <div class="col-7">
+                                                                    <p class="fw-bold mb-1">Quét mã QR để thanh toán chuyển khoản:</p>
+                                                                    <p class="small text-muted mb-1">• Nội dung tự động: <strong>THANH TOAN DON @item.Id</strong></p>
+                                                                    <p class="small text-muted mb-0">• Cảm ơn quý khách đã mua sắm tại WebBanDongHo!</p>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="https://img.vietqr.io/image/MB-0357856778-compact2.png?amount=@((long)item.TongTien)&addInfo=THANH%20TOAN%20DON%20@item.Id"
+                                                                         alt="Mã QR Thanh Toán" style="height: 130px; border: 1px solid #ddd; border-radius: 8px; padding: 4px;" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                                            <button type="button" class="btn btn-primary fw-bold" onclick="printInvoice(@item.Id)">🖨️ In Hóa Đơn / Lưu PDF</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="8" class="text-center text-muted py-3">Chưa có đơn hàng nào.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-taikhoan" role="tabpanel">
+            <div class="card shadow-sm">
+                <div class="card-body table-responsive">
+                    <table class="table table-bordered table-hover align-middle text-center mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Tên đăng nhập</th>
+                                <th>Email</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.NguoiDungs != null && Model.NguoiDungs.Any())
+                            {
+                                foreach (var user in Model.NguoiDungs)
+                                {
+                                    <tr>
+                                        <td class="fw-bold">#@user.Id</td>
+                                        <td class="fw-bold text-start">@user.TenDangNhap</td>
+                                        <td class="text-start">@user.Email</td>
+                                        <td>
+                                            @if (user.TenDangNhap != "admin")
+                                            {
+                                                <form method="post" asp-page-handler="DeleteUser" class="d-inline" onsubmit="return confirm('Xóa tài khoản này?');">
+                                                    <input type="hidden" name="id" value="@user.Id" />
+                                                    <button type="submit" class="btn btn-danger btn-sm">Xóa</button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success">Admin chính</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="4" class="text-center text-muted py-3">Chưa có tài khoản nào.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    function printInvoice(orderId) {
+        var printElement = document.getElementById('printArea-' + orderId);
+        if (!printElement) return;
+
+        document.body.innerHTML = '<div class="container p-4">' + printElement.innerHTML + '</div>';
+        window.print();
+        window.location.reload();
+    }
+
+    function filterOrdersTable() {
+        var keyword = (document.getElementById('searchOrderInput')?.value || '').toLowerCase().trim();
+        var statusFilter = document.getElementById('filterOrderStatus')?.value || 'ALL';
+        var rows = document.querySelectorAll('#ordersTable tbody tr.order-row');
+
+        rows.forEach(function (row) {
+            var text = row.innerText.toLowerCase();
+            var rowStatus = row.getAttribute('data-status') || '';
+            var matchKeyword = !keyword || text.includes(keyword);
+            var matchStatus = (statusFilter === 'ALL') || (rowStatus === statusFilter);
+
+            row.style.display = (matchKeyword && matchStatus) ? '' : 'none';
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        var activeTab = sessionStorage.getItem('activeAdminTab');
+        if (activeTab) {
+            var tabEl = document.querySelector('#adminTabs button[data-bs-target="' + activeTab + '"]');
+            if (tabEl && window.bootstrap) { new bootstrap.Tab(tabEl).show(); }
+        }
+        document.querySelectorAll('#adminTabs button[data-bs-toggle="tab"]').forEach(function (btn) {
+            btn.addEventListener('shown.bs.tab', function (e) {
+                sessionStorage.setItem('activeAdminTab', e.target.getAttribute('data-bs-target'));
+            });
+        });
+
+        const labelsNgay = @Html.Raw(Model.ChartLabelsJson);
+        const dataDoanhThu = @Html.Raw(Model.ChartDataJson);
+        const soDonDangGiao = @Model.SoDonDangGiao;
+        const soDonHoanThanh = @Model.SoDonHoanThanh;
+        const soDonDaHuy = @Model.SoDonDaHuy;
+
+        const ctxBar = document.getElementById('revenueBarChart');
+        if (ctxBar && typeof Chart !== 'undefined') {
+            new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: labelsNgay.length > 0 ? labelsNgay : ['Chưa có dữ liệu'],
+                    datasets: [{
+                        label: 'Doanh thu (VNĐ)',
+                        data: dataDoanhThu.length > 0 ? dataDoanhThu : [0],
+                        backgroundColor: 'rgba(13, 110, 253, 0.8)',
+                        borderColor: 'rgb(13, 110, 253)',
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        maxBarThickness: 60
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('vi-VN') + ' đ';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        const ctxPie = document.getElementById('statusPieChart');
+        if (ctxPie && typeof Chart !== 'undefined') {
+            new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Đang giao', 'Hoàn thành', 'Đã hủy'],
+                    datasets: [{
+                        data: [soDonDangGiao, soDonHoanThanh, soDonDaHuy],
+                        backgroundColor: ['#0d6efd', '#198754', '#dc3545'],
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+    });
+</script>

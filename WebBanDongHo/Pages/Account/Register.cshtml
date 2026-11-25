@@ -1,0 +1,58 @@
+@page
+@model WebBanDongHo.Pages.Account.RegisterModel
+@{
+    ViewData["Title"] = "Đăng ký tài khoản";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow-sm p-4">
+            <h3 class="text-center text-primary mb-4 fw-bold">Đăng Ký Tài Khoản</h3>
+
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <div class="alert alert-danger">@Model.ErrorMessage</div>
+            }
+
+            <form method="post">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Tên đăng nhập</label>
+                    <input asp-for="NguoiDungInfo.TenDangNhap" class="form-control" placeholder="Nhập username" />
+                    <span asp-validation-for="NguoiDungInfo.TenDangNhap" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Họ và tên</label>
+                    <input asp-for="NguoiDungInfo.HoTen" class="form-control" placeholder="Nhập họ tên đầy đủ" />
+                    <span asp-validation-for="NguoiDungInfo.HoTen" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Email </label>
+                    <input asp-for="NguoiDungInfo.Email" class="form-control" type="email" placeholder="Nhập địa chỉ email" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Mật khẩu</label>
+                    <input asp-for="NguoiDungInfo.MatKhau" class="form-control" type="password" placeholder="Nhập mật khẩu" />
+                    <span asp-validation-for="NguoiDungInfo.MatKhau" class="text-danger"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Xác nhận mật khẩu</label>
+                    <input asp-for="XacNhanMatKhau" class="form-control" type="password" placeholder="Nhập lại mật khẩu" />
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 fw-bold">Đăng ký ngay</button>
+
+                <div class="text-center mt-3">
+                    <span>Đã có tài khoản? <a href="/Account/Login" class="text-decoration-none fw-bold">Đăng nhập tại đây</a></span>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

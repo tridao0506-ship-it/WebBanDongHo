@@ -1,0 +1,80 @@
+﻿@page
+@model WebBanDongHo.Pages.OrdersModel
+@{
+    ViewData["Title"] = "Đơn hàng của tôi";
+}
+
+<div class="container mt-4 mb-5">
+    <h2 class="text-center fw-bold mb-4">Lịch Sử Đơn Hàng Của Bạn</h2>
+
+    @if (Model.DonHangs != null && Model.DonHangs.Any())
+    {
+        foreach (var donHang in Model.DonHangs)
+        {
+            <div class="card shadow-sm mb-4 border">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+                    <div>
+                        <span class="fw-bold fs-5 text-primary">Đơn hàng #@donHang.Id</span>
+                        <span class="text-muted ms-3">Ngày đặt: @donHang.NgayDat.ToString("dd/MM/yyyy HH:mm")</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        @if (donHang.TrangThai == "Hoàn thành")
+                        {
+                            <span class="badge bg-success px-3 py-2 fs-6">Hoàn thành</span>
+                        }
+                        else if (donHang.TrangThai == "Đã hủy")
+                        {
+                            <span class="badge bg-danger px-3 py-2 fs-6">Đã hủy</span>
+                        }
+                        else if (donHang.TrangThai == "Đang giao")
+                        {
+                            <span class="badge bg-primary px-3 py-2 fs-6">Đang giao</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning text-dark px-3 py-2 fs-6">@donHang.TrangThai</span>
+
+                            <form method="post" asp-page-handler="CancelOrder" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng #@donHang.Id không?');">
+                                <input type="hidden" name="id" value="@donHang.Id" />
+                                <button type="submit" class="btn btn-outline-danger btn-sm fw-bold ms-2">Hủy đơn hàng</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1"><strong>Người nhận:</strong> @donHang.HoTen (@donHang.SoDienThoai)</p>
+                    <p class="mb-3"><strong>Địa chỉ giao:</strong> @donHang.DiaChi</p>
+
+                    <h6 class="fw-bold text-secondary border-bottom pb-2">Danh sách sản phẩm trong đơn:</h6>
+                    <ul class="list-group list-group-flush mb-3">
+                        @if (donHang.ChiTietDonHangs != null && donHang.ChiTietDonHangs.Any())
+                        {
+                            foreach (var ct in donHang.ChiTietDonHangs)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <div>
+                                        <span>Mã đồng hồ: <strong>#@ct.DongHoId</strong></span>
+                                        <span class="text-muted ms-2">(Số lượng: <strong>@ct.SoLuong</strong> chiếc)</span>
+                                    </div>
+                                    <span class="fw-bold text-danger">@String.Format("{0:#,##0} đ", ct.GiaBan * ct.SoLuong)</span>
+                                </li>
+                            }
+                        }
+                    </ul>
+
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <h5 class="fw-bold mb-0">Tổng cộng thanh toán:</h5>
+                        <h4 class="fw-bold text-danger mb-0">@String.Format("{0:#,##0} đ", donHang.TongTien)</h4>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <p class="text-muted fs-5">Bạn chưa có đơn hàng nào.</p>
+            <a asp-page="/Index" class="btn btn-primary fw-bold mt-2">Mua sắm ngay</a>
+        </div>
+    }
+</div>

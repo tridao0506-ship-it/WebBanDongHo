@@ -1,0 +1,179 @@
+@page
+@model WebBanDongHo.Pages.Admin.LiveChatModel
+@{
+    ViewData["Title"] = "Tin Nhắn Trực Tuyến (LiveChat)";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="container-fluid mt-4 mb-5 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="fw-bold text-danger">💬 Tin Nhắn Trực Tuyến (LiveChat Khách Hàng)</h3>
+        <span class="badge bg-success p-2">● Đang hoạt động</span>
+    </div>
+
+    <div class="row shadow-sm border rounded bg-white overflow-hidden" style="height: 600px;">
+
+        <div class="col-md-4 border-end p-0 d-flex flex-column bg-light">
+            <div class="p-3 border-bottom bg-white">
+                <h6 class="fw-bold mb-0 text-secondary">Chọn Khách Hàng</h6>
+            </div>
+            <div class="overflow-auto flex-grow-1 p-2" id="list-khach-hang">
+                @if (Model.DanhSachKhachHang != null && Model.DanhSachKhachHang.Any())
+                {
+                    foreach (var kh in Model.DanhSachKhachHang)
+                    {
+                        var tenHienThi = string.IsNullOrEmpty(kh.HoTen) ? kh.TenDangNhap : kh.HoTen;
+                        <div class="p-3 border rounded bg-white mb-2 customer-item position-relative"
+                             style="cursor: pointer;"
+                             data-username="@kh.TenDangNhap"
+                             data-fullname="@tenHienThi">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width: 40px; height: 40px;">
+                                        @kh.TenDangNhap.Substring(0, 1).ToUpper()
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-0 text-dark">@kh.TenDangNhap</h6>
+                                        <small class="text-muted">@kh.Email</small>
+                                    </div>
+                                </div>
+                                <span class="badge bg-danger rounded-pill unread-badge @(kh.TinNhanChuaDoc > 0 ? "" : "d-none")">@kh.TinNhanChuaDoc</span>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted text-center mt-4">Chưa có khách hàng nào đăng ký.</p>
+                }
+            </div>
+        </div>
+
+        <div class="col-md-8 p-0 d-flex flex-column">
+            <div class="p-3 border-bottom bg-white d-flex align-items-center">
+                <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width: 40px; height: 40px;" id="current-avatar">?</div>
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark" id="current-chat-name">Chọn một khách hàng để bắt đầu chat</h5>
+                    <small class="text-muted" id="current-chat-status">Trực tuyến</small>
+                </div>
+            </div>
+
+            <div id="admin-chat-messages" class="flex-grow-1 p-4 overflow-auto bg-light" style="height: 430px;">
+                <div class="text-center text-muted my-auto">Vui lòng chọn khách hàng từ danh sách bên trái.</div>
+            </div>
+
+            <div class="p-3 border-top bg-white">
+                <div class="input-group">
+                    <input type="text" id="admin-chat-input" class="form-control" placeholder="Nhập câu trả lời phản hồi cho khách hàng..." autocomplete="off" disabled />
+                    <button type="button" id="admin-send-btn" class="btn btn-primary fw-bold px-4" disabled>Gửi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let selectedUser = null;
+        const chatInput = document.getElementById("admin-chat-input");
+        const sendBtn = document.getElementById("admin-send-btn");
+        const msgContainer = document.getElementById("admin-chat-messages");
+
+        document.querySelectorAll('.customer-item').forEach(item => {
+            item.addEventListener('click', function () {
+                const username = this.getAttribute('data-username');
+                const fullname = this.getAttribute('data-fullname');
+                selectedUser = username;
+
+                const badge = this.querySelector('.unread-badge');
+                if (badge) badge.classList.add('d-none');
+
+                document.querySelectorAll('.customer-item').forEach(el => {
+                    el.classList.remove('border-primary', 'bg-light');
+                    el.classList.add('bg-white');
+                });
+                this.classList.remove('bg-white');
+                this.classList.add('border-primary', 'bg-light');
+
+                document.getElementById("current-chat-name").innerText = fullname + " (" + username + ")";
+                document.getElementById("current-avatar").innerText = username.substring(0, 1).toUpperCase();
+
+                chatInput.disabled = false;
+                sendBtn.disabled = false;
+                chatInput.focus();
+
+                loadAdminMessages();
+            });
+        });
+
+        function loadAdminMessages() {
+            if (!selectedUser) return;
+
+            fetch(`/Admin/LiveChat?handler=Messages&username=${encodeURIComponent(selectedUser)}`)
+                .then(res => res.json())
+                .then(messages => {
+                    let html = "";
+                    if (messages.length === 0) {
+                        html = `<div class="text-center text-muted small my-2">Chưa có tin nhắn nào với ${selectedUser}</div>`;
+                    } else {
+                        messages.forEach(item => {
+                            const isAdmin = (item.sender === "admin");
+                            html += `
+                                <div class="mb-3 d-flex ${isAdmin ? 'justify-content-end' : 'justify-content-start'}">
+                                    <div class="p-3 rounded shadow-sm ${isAdmin ? 'bg-primary text-white' : 'bg-white text-dark border'}" style="max-width: 75%;">
+                                        <small class="fw-bold d-block ${isAdmin ? 'text-white-50' : 'text-muted'} mb-1">${isAdmin ? 'Bạn (Admin)' : selectedUser}</small>
+                                        ${item.message}
+                                    </div>
+                                </div>`;
+                        });
+                    }
+                    msgContainer.innerHTML = html;
+                    msgContainer.scrollTop = msgContainer.scrollHeight;
+                })
+                .catch(err => console.error("Lỗi tải tin nhắn:", err));
+        }
+
+        function guiTinNhanAdmin() {
+            const message = chatInput.value.trim();
+            if (message === "" || !selectedUser) return;
+
+            sendBtn.disabled = true;
+
+            fetch('/Admin/LiveChat?handler=Send', {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ username: selectedUser, message: message })
+            })
+            .then(res => res.json())
+            .then(data => {
+                sendBtn.disabled = false;
+                if (data.success) {
+                    chatInput.value = "";
+                    chatInput.focus();
+                    loadAdminMessages();
+                }
+            })
+            .catch(err => {
+                console.error("Lỗi gửi tin:", err);
+                sendBtn.disabled = false;
+            });
+        }
+
+        sendBtn.addEventListener("click", guiTinNhanAdmin);
+        chatInput.addEventListener("keydown", function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                guiTinNhanAdmin();
+            }
+        });
+
+        setInterval(() => {
+            if (selectedUser) {
+                loadAdminMessages();
+            }
+        }, 3000);
+    });
+</script>

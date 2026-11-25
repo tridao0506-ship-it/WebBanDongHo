@@ -1,0 +1,62 @@
+﻿@page
+@model WebBanDongHo.Pages.CartModel
+@{
+    ViewData["Title"] = "Giỏ hàng";
+    decimal tongTien = 0;
+}
+
+<div class="container mt-4">
+    <h2 class="my-4 text-center">Giỏ Hàng Của Bạn</h2>
+
+    @if (Model.Cart == null || Model.Cart.Count == 0)
+    {
+        <div class="text-center">
+            <p>Giỏ hàng đang trống.</p>
+            <a asp-page="/Index" class="btn btn-primary">Quay lại mua sắm</a>
+        </div>
+    }
+    else
+    {
+        <table class="table table-bordered text-center align-middle">
+            <thead>
+                <tr>
+                    <th>Ảnh</th>
+                    <th>Tên đồng hồ</th>
+                    <th>Giá</th>
+                    <th>Số lượng</th>
+                    <th>Thành tiền</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Cart)
+                {
+                    var thanhTien = item.GiaBan * item.SoLuong;
+                    tongTien += thanhTien;
+                    <tr>
+                        <td>
+                            <img src="@item.HinhAnh" style="width: 60px; height: 60px; object-fit: cover;" />
+                        </td>
+                        <td>@item.TenDongHo</td>
+                        <td>@item.GiaBan.ToString("N0") đ</td>
+                        <td>
+                            <a asp-page-handler="Decrease" asp-route-id="@item.Id" class="btn btn-sm btn-secondary">-</a>
+                            <span class="mx-2 fw-bold">@item.SoLuong</span>
+                            <a asp-page-handler="Increase" asp-route-id="@item.Id" class="btn btn-sm btn-secondary">+</a>
+                        </td>
+                        <td class="text-danger fw-bold">@thanhTien.ToString("N0") đ</td>
+                        <td>
+                            <a asp-page-handler="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Xóa</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <a asp-page="/Index" class="btn btn-secondary">Tiếp tục mua</a>
+            <h4>Tổng tiền: <span class="text-danger fw-bold">@tongTien.ToString("N0") đ</span></h4>
+            <a asp-page="/Checkout" class="btn btn-success">Thanh toán</a>
+        </div>
+    }
+</div>

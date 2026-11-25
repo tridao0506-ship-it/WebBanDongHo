@@ -1,0 +1,311 @@
+﻿@page
+@model WebBanDongHo.Pages.LuckyWheelModel
+@{
+    ViewData["Title"] = "Vòng quay may mắn";
+}
+
+<style>
+    .wheel-wrapper {
+        position: relative;
+        width: 420px;
+        max-width: 92vw;
+        aspect-ratio: 1 / 1;
+        margin: 0 auto;
+    }
+
+    .wheel-pointer {
+        position: absolute;
+        top: -16px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 18px solid transparent;
+        border-right: 18px solid transparent;
+        border-top: 34px solid #dc3545;
+        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+        z-index: 20;
+    }
+
+    .wheel-canvas {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        border: 8px solid #f8d24b;
+        box-shadow: 0 0 28px rgba(248, 210, 75, 0.35), 0 10px 25px rgba(0, 0, 0, 0.5);
+        display: block;
+        transition: transform 4.5s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        will-change: transform;
+    }
+
+    .wheel-center-btn {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 78px;
+        height: 78px;
+        border-radius: 50%;
+        border: 4px solid #fff;
+        background: linear-gradient(135deg, #ff512f, #dd2476);
+        color: #fff;
+        font-weight: 800;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.45);
+        z-index: 15;
+        transition: transform 0.15s ease;
+    }
+
+        .wheel-center-btn:hover:not(:disabled) {
+            transform: translate(-50%, -50%) scale(1.07);
+        }
+
+        .wheel-center-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+</style>
+
+<div class="container py-4">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-warning">🎯 Vòng Quay May Mắn - Săn Quà Đồng Hồ</h2>
+        <p class="text-secondary mb-1">Quay ngay để nhận mã giảm giá và phụ kiện chính hãng từ WebBanDongHo</p>
+        <span class="badge bg-success fs-6 px-3 py-2">
+            Lượt quay còn lại: <span id="spins_left">3</span>
+        </span>
+    </div>
+
+    <div class="row align-items-center g-4">
+        <div class="col-lg-7 text-center">
+            <div class="wheel-wrapper">
+                <div class="wheel-pointer"></div>
+                <canvas id="luckyCanvas" width="460" height="460" class="wheel-canvas"></canvas>
+                <button id="spinBtn" class="wheel-center-btn" type="button">QUAY</button>
+            </div>
+
+            <div class="mt-4 d-flex justify-content-center gap-2">
+                <button id="spinBtnMain" type="button" class="btn btn-warning btn-lg fw-bold px-4">
+                    Quay Ngay
+                </button>
+                <button id="resetDemoBtn" type="button" class="btn btn-outline-secondary btn-lg">
+                    Thêm lượt (Demo)
+                </button>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div id="resultCard" class="card shadow border-warning mb-3 d-none">
+                <div class="card-body text-center">
+                    <h5 class="fw-bold text-warning mb-2" id="resultTitle">🎉 Chúc mừng bạn!</h5>
+                    <p class="fs-5 fw-bold mb-2" id="resultPrize"></p>
+                    <div id="voucherBox" class="d-none">
+                        <div class="input-group mb-2">
+                            <input type="text" id="wonCodeInput" class="form-control text-center fw-bold text-success" readonly />
+                            <button type="button" id="copyCodeBtn" class="btn btn-success fw-bold">Sao chép</button>
+                        </div>
+                        <small id="copyStatus" class="text-success d-block"></small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+                    <span>🏆 Lịch sử trúng thưởng</span>
+                    <button id="clearHistoryBtn" type="button" class="btn btn-sm btn-outline-danger">Xóa</button>
+                </div>
+                <ul id="historyList" class="list-group list-group-flush">
+                    <li class="list-group-item text-muted text-center">Chưa có lượt quay nào.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const canvas = document.getElementById("luckyCanvas");
+        const ctx = canvas.getContext("2d");
+        const spinBtn = document.getElementById("spinBtn");
+        const spinBtnMain = document.getElementById("spinBtnMain");
+        const resetDemoBtn = document.getElementById("resetDemoBtn");
+        const spinsLeftEl = document.getElementById("spins_left");
+        const resultCard = document.getElementById("resultCard");
+        const resultTitle = document.getElementById("resultTitle");
+        const resultPrize = document.getElementById("resultPrize");
+        const voucherBox = document.getElementById("voucherBox");
+        const wonCodeInput = document.getElementById("wonCodeInput");
+        const copyCodeBtn = document.getElementById("copyCodeBtn");
+        const copyStatus = document.getElementById("copyStatus");
+        const historyList = document.getElementById("historyList");
+        const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+
+        const prizes = [
+            { label: "Giảm 10%", code: "GIAM10", color: "#e63946", text: "#fff" },
+            { label: "Freeship GHN", code: "FREESHIP", color: "#1d3557", text: "#fff" },
+            { label: "Giảm 50K", code: "GIAM50K", color: "#f4a261", text: "#111" },
+            { label: "Chúc may mắn", code: "", color: "#6c757d", text: "#fff" },
+            { label: "Tặng dây da", code: "TANGDAYDA", color: "#2a9d8f", text: "#fff" },
+            { label: "Thay pin Free", code: "THAYPINFREE", color: "#457b9d", text: "#fff" },
+            { label: "Giảm 100K", code: "GIAM100K", color: "#9b5de5", text: "#fff" },
+            { label: "Hộp đồng hồ", code: "TANGHOPVIP", color: "#e9c46a", text: "#111" }
+        ];
+
+        const numSlices = prizes.length;
+        const sliceDeg = 360 / numSlices;
+        const sliceRad = (2 * Math.PI) / numSlices;
+
+        let currentRotation = 0;
+        let isSpinning = false;
+
+        let savedSpins = parseInt(localStorage.getItem("wbdh_spins_left"), 10);
+        let spinsLeft = isNaN(savedSpins) ? 3 : savedSpins;
+        let history = [];
+        try {
+            history = JSON.parse(localStorage.getItem("wbdh_spin_history") || "[]");
+            if (!Array.isArray(history)) history = [];
+        } catch {
+            history = [];
+        }
+
+        function drawWheel() {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const radius = cx - 4;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            for (let i = 0; i < numSlices; i++) {
+                const startAngle = i * sliceRad - Math.PI / 2;
+                const endAngle = startAngle + sliceRad;
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = prizes[i].color;
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "#ffffff";
+                ctx.stroke();
+
+                ctx.save();
+                ctx.rotate(startAngle + sliceRad / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = prizes[i].text;
+                ctx.font = "bold 17px Segoe UI, sans-serif";
+                ctx.fillText(prizes[i].label, radius - 22, 6);
+                ctx.restore();
+            }
+
+            ctx.restore();
+        }
+
+        function renderState() {
+            spinsLeftEl.innerText = spinsLeft;
+            localStorage.setItem("wbdh_spins_left", String(spinsLeft));
+
+            if (history.length === 0) {
+                historyList.innerHTML = '<li class="list-group-item text-muted text-center">Chưa có lượt quay nào.</li>';
+            } else {
+                historyList.innerHTML = history.map(item => `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${item.label}</strong>
+                            <div class="small text-muted">${item.time}</div>
+                        </div>
+                        ${item.code ? `<span class="badge bg-success">${item.code}</span>` : `<span class="badge bg-secondary">Không trúng</span>`}
+                    </li>
+                `).join("");
+            }
+        }
+
+        function showResult(prize) {
+            resultCard.classList.remove("d-none");
+            copyStatus.innerText = "";
+
+            if (prize.code) {
+                resultTitle.innerText = "🎉 Chúc mừng bạn đã trúng thưởng!";
+                resultPrize.innerText = prize.label;
+                wonCodeInput.value = prize.code;
+                voucherBox.classList.remove("d-none");
+
+                if (typeof confetti === "function") {
+                    confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+                }
+            } else {
+                resultTitle.innerText = "😅 Tiếc quá!";
+                resultPrize.innerText = "Chúc bạn may mắn lần sau nhé!";
+                voucherBox.classList.add("d-none");
+            }
+
+            history.unshift({
+                label: prize.label,
+                code: prize.code,
+                time: new Date().toLocaleTimeString("vi-VN")
+            });
+            if (history.length > 8) history.pop();
+            localStorage.setItem("wbdh_spin_history", JSON.stringify(history));
+            renderState();
+        }
+
+        function spin() {
+            if (isSpinning) return;
+            if (spinsLeft <= 0) {
+                alert("Bạn đã hết lượt quay! Nhấn 'Thêm lượt (Demo)' để quay tiếp.");
+                return;
+            }
+
+            isSpinning = true;
+            spinsLeft--;
+            spinBtn.disabled = true;
+            spinBtnMain.disabled = true;
+            renderState();
+
+            const winningIndex = Math.floor(Math.random() * numSlices);
+            const targetSliceCenter = winningIndex * sliceDeg + sliceDeg / 2;
+            const targetMod = (360 - targetSliceCenter + 360) % 360;
+            const jitter = (Math.random() - 0.5) * (sliceDeg * 0.5);
+            const currentMod = ((currentRotation % 360) + 360) % 360;
+            const delta = (targetMod - currentMod + 360) % 360;
+
+            currentRotation += 6 * 360 + delta + jitter;
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+            setTimeout(() => {
+                isSpinning = false;
+                spinBtn.disabled = false;
+                spinBtnMain.disabled = false;
+                showResult(prizes[winningIndex]);
+            }, 4600);
+        }
+
+        spinBtn.addEventListener("click", spin);
+        spinBtnMain.addEventListener("click", spin);
+
+        resetDemoBtn.addEventListener("click", function () {
+            spinsLeft += 3;
+            renderState();
+        });
+
+        clearHistoryBtn.addEventListener("click", function () {
+            history = [];
+            localStorage.removeItem("wbdh_spin_history");
+            renderState();
+        });
+
+        copyCodeBtn.addEventListener("click", function () {
+            navigator.clipboard.writeText(wonCodeInput.value).then(() => {
+                copyStatus.innerText = "Đã sao chép mã thành công!";
+            });
+        });
+
+        drawWheel();
+        renderState();
+    });
+</script>
